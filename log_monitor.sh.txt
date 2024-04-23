@@ -1,30 +1,47 @@
 #!/bin/bash
 
-log_file="/var/log/boot.log"
+log_file="/var/log/auth.log"
+
+error_keyword="error"
+http_keyword="HTTP"
 
 monitor_log() {
     tail -f "$log_file" | while read -r line; do
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - New log entry: $line"
+        echo "Detected a new log entry: $line"
+        count_keywords "$line"
     done
 }
 
+count_keywords() {
+    local entry="$1"
+    local error_count=$(echo "$entry" | grep -o "\b$error_keyword\b" | wc -l)
+    local http_count=$(echo "$entry" | grep -o "\b$http_keyword\b" | wc -l)
+    
+    total_error_count=$((total_error_count + error_count))
+    total_http_count=$((total_http_count + http_count))
+}
+
 sigint_handler() {
-    echo "Received SIGINT. Exiting log monitor."
+    echo "Exiting the log monitor due to interruption."
     generate_summary_report
     exit 0
 }
 
-trap sigint_handler SIGINT
-
 generate_summary_report() {
     echo "Summary Report:"
     total_entries=$(wc -l < "$log_file")
-    echo "Total log entries: $total_entries"
+    echo "Total log entries observed: $total_entries"
+    echo "Total occurrences of error messages: $total_error_count"
+    echo "Total occurrences of HTTP status codes: $total_http_count"
 }
 
 main() {
     echo "Starting log monitoring for $log_file..."
+    total_error_count=0
+    total_http_count=0
     monitor_log
 }
+
+trap sigint_handler SIGINT
 
 main
