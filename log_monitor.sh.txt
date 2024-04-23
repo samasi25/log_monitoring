@@ -1,0 +1,30 @@
+#!/bin/bash
+
+log_file="/var/log/boot.log"
+
+monitor_log() {
+    tail -f "$log_file" | while read -r line; do
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - New log entry: $line"
+    done
+}
+
+sigint_handler() {
+    echo "Received SIGINT. Exiting log monitor."
+    generate_summary_report
+    exit 0
+}
+
+trap sigint_handler SIGINT
+
+generate_summary_report() {
+    echo "Summary Report:"
+    total_entries=$(wc -l < "$log_file")
+    echo "Total log entries: $total_entries"
+}
+
+main() {
+    echo "Starting log monitoring for $log_file..."
+    monitor_log
+}
+
+main
